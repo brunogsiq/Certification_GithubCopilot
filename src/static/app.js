@@ -19,14 +19,56 @@ document.addEventListener("DOMContentLoaded", () => {
         activityCard.className = "activity-card";
 
         const spotsLeft = details.max_participants - details.participants.length;
+        const participantsMarkup = details.participants.length
+          ? details.participants
+              .map((participant) => `
+                <span class="participant-item">
+                  <span class="participant-email">${participant}</span>
+                  <button class="delete-participant-btn" title="Remove participant" data-activity="${encodeURIComponent(name)}" data-email="${encodeURIComponent(participant)}">&times;</button>
+                </span>
+              `)
+              .join("")
+          : '<span class="participant-item no-participant">No participants yet</span>';
 
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <div class="participants-section">
+            <p class="participants-title"><strong>Participants:</strong></p>
+            <div class="participants-list">
+              ${participantsMarkup}
+            </div>
+          </div>
         `;
 
+
+        // Adiciona listeners para os botões de exclusão após inserir o HTML
+        setTimeout(() => {
+          const deleteBtns = activityCard.querySelectorAll('.delete-participant-btn');
+          deleteBtns.forEach((btn) => {
+            btn.addEventListener('click', async (e) => {
+              e.preventDefault();
+              const activityName = decodeURIComponent(btn.getAttribute('data-activity'));
+              const email = decodeURIComponent(btn.getAttribute('data-email'));
+              if (!confirm(`Remove ${email} from ${activityName}?`)) return;
+              try {
+                const response = await fetch(`/activities/${encodeURIComponent(activityName)}/signup?email=${encodeURIComponent(email)}`, {
+                  method: 'DELETE',
+                });
+                if (response.ok) {
+                  fetchActivities();
+                } else {
+                  const result = await response.json();
+                  alert(result.detail || 'Failed to remove participant.');
+                }
+              } catch (err) {
+                alert('Failed to remove participant.');
+              }
+            });
+          });
+        }, 0);
         activitiesList.appendChild(activityCard);
 
         // Add option to select dropdown
